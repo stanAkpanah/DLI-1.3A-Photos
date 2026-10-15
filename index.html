@@ -194,7 +194,7 @@ textarea{color:inherit}
       <div class="field" style="flex:1 1 160px"><label for="dDate">Date captured</label><input id="dDate" type="date"></div>
     </div>
     <div class="capbar" id="capbar" hidden>
-      <div class="field"><label for="capAll">Paste WhatsApp captions</label><textarea id="capAll" placeholder="DLI 1.3A&#10;Form Number: 05170&#10;Name: Josiah Gift Thompson&#10;09037634734"></textarea></div>
+      <div class="field"><label for="capAll">Paste WhatsApp captions</label><textarea id="capAll" placeholder="DLI 1.3A&#10;Form Number: 05170&#10;Name: Josiah Gift Thompson&#10;09037634734&#10;Community: Amarata"></textarea></div>
       <div style="display:flex;flex-direction:column;gap:8px">
         <button class="btn ghost" id="capApply" type="button">Fill from captions</button>
       </div>
@@ -212,7 +212,8 @@ textarea{color:inherit}
     <h2 id="regTitle">Registry</h2>
     <div class="toolbar">
       <div class="field search"><label for="q">Search</label><input id="q" type="search" placeholder="Form number, name or phone"></div>
-            <div class="field"><label for="fArea">Community</label><select id="fArea"><option value="">All communities</option></select></div>
+      <div class="field"><label for="fLga">LGA</label><select id="fLga"><option value="">All LGAs</option></select></div>
+      <div class="field"><label for="fArea">Community</label><select id="fArea"><option value="">All communities</option></select></div>
       <div class="field"><label for="fAgent">Agent</label><select id="fAgent"><option value="">All agents</option></select></div>
       <div class="field"><label for="sort">Order</label><select id="sort"><option value="desc">Newest first</option><option value="asc">Oldest first</option><option value="name">Name A–Z</option><option value="form">Form number</option></select></div>
       <div class="exports">
@@ -239,6 +240,24 @@ textarea{color:inherit}
 
 <script>
 const $=s=>document.querySelector(s);
+const LGAS=["Brass", "Ekeremor", "Kolokuma/Opokuma", "Nembe", "Ogbia", "Southern Ijaw", "Sagbama", "Yenagoa"];
+const COMMUNITY_LGA={"Abadikiri":[0],"Abagbene":[5],"Abasere":[7],"Abedigbene":[0],"Abobir":[4],"Abolgbene":[5],"Abolikiri":[0],"Abuku":[6],"Abulobiri":[0],"Adaakou":[0],"Adagbabiri":[6],"Adamkiri":[0],"Adukiri":[3],"Agada":[3],"Agbakabiriyai":[0],"Agbere":[6],"Agbia":[7],"Agbobiri":[7],"Agidigbere":[5],"Agoro":[6],"Agorogbene":[7,6],"Agrisaba":[3],"Agubagaha":[0],"Agudama":[7],"Agudama-Epie":[7],"Aguobiri":[5],"Aiegbe":[1],"Akada":[7],"Akaibiri":[2],"Akakumana":[3],"Akaragbene":[5],"Akassa":[0],"Akeddei":[6],"Akipelai":[0],"Akolomani":[4],"Akpide":[7],"Akpobeleiowei":[5],"Akunomi":[7],"Alagbene":[5],"Aleegbene":[5],"Aleibiri":[1],"Alisogbene":[5],"Allagaokiri":[3],"Amabulour":[1],"Amagbefeu":[0],"Amarata":[7],"Amasara":[3],"Amasso":[7],"Amassoma":[5],"Amataugbene":[5],"Amorokeni":[4],"Ampogu":[0],"Amuruto":[4],"Ananagbene":[1],"Angalabiri":[6],"Angalawei-gbene":[1],"Angiama":[5],"Angiama-gbene":[5],"Anibeze":[6],"Anyama":[4],"Anyamabele":[7],"Aparanbio":[0],"Apoi":[5],"Arikaripo":[5],"Arumhikiri":[0],"Asamabiri":[6],"Atissa":[7],"Atubo":[0],"Awajeakiri":[0],"Awazakiri":[0],"Aya-Ama":[2],"Ayagirikiri":[0],"Ayama":[5],"Ayamassa":[1],"Ayibabiri":[2],"Ayokoroma":[2],"Ayougbene":[5],"Azagbene":[1],"Aziama":[5],"Azikoro":[7],"Azuzuama":[5],"Babatonogbene":[5],"Baberegbene":[5],"Bamankiri":[0],"Bayentorugbene":[5],"Bebelibiri":[7],"Beletiama":[0],"Benkiri":[3,0],"Betaland":[7],"Betterland":[5],"Biabugbene":[5],"Biagbogbene":[5],"Biantubu":[0],"Bikirubogbene":[5],"Biogbolo":[7],"Birieigbene":[5],"Birisyegbene":[5],"Biseni":[7],"Bitou":[5],"Boama":[0],"Bokomgbene":[5],"Bolongbene":[5],"Bolou-Orua":[6],"Boma":[5],"Bonneykiri":[0],"Bown-Adagbabiri":[1],"Brass":[0],"Bumodi":[7],"Buogboko":[0],"Buragbene":[5],"Burukiri":[0],"Burukububo":[5],"Cape Formosa":[0],"Captninakiri":[0],"Clarendon":[0],"Climonbene":[5],"Consingbere":[5],"Curpen":[0],"Dagnnama":[6],"Diebu":[5],"Diogbegbene":[5],"Donkerogbene":[5],"Dorgu-Ewoama":[3],"Douglasgbene":[5],"Dubagbene":[5],"Dumobi-Kumakiri":[3],"Duokumgbene":[0],"Ebatimogbene":[5],"Ebedebiri":[6],"Ebelegbene":[0],"Ebidargbene":[5],"Ebikiri":[0],"Ede-Pie":[7],"Edebarikiri":[0],"Eduregbene":[5],"Eduwini":[1],"Egarebeni":[5],"Egbebiri":[7],"Egbedekiri":[0],"Egbepulougbene":[6],"Egberime 1":[5],"Egberime 11":[5],"Egbilaba":[0],"Egekiri":[0],"Egeleama":[4],"Egeletia":[0],"Egeregere":[0],"Egereogo":[0],"Egwema":[0],"Egwema Pogu":[0],"Ekeki":[7],"Ekemakiri":[0],"Ekeni":[5],"Ekeogbene":[5],"Ekeremor":[1],"Ekesitoko":[0],"Ekinigbene":[5],"Ekowe":[5],"Ekpeikiri":[3],"Ekperiware":[6],"Ekpetiama":[7],"Elebele":[4],"Elemebiri":[6],"Elemuama":[3],"Elgitekin":[0],"Eluenigbene":[0],"Emadike":[4],"Emago":[4],"Emakalakala":[4],"Emblama":[7],"Emegai":[4],"Emete":[5],"Enegalogo":[0],"Eniwari":[5],"Enyumuana":[3],"Epebu":[4],"Epie":[7],"Erebugbene":[5],"Erefumakomogbene":[5],"Ereweibio":[0],"Etabolagone":[0],"Etemere":[5],"Etieme":[3],"Ewama":[4],"Ewediri":[0],"Eweisuo":[0],"Ewoama":[0],"Ewoi":[4],"Ewokiri":[3,0],"Eyenkiri":[0],"Ezetu":[5],"Fangbe":[7],"Fantuo":[0],"Fekorukiri":[3],"Feremoama":[1],"Fiesigbene":[5],"Fiwaritimi":[0],"Foinbiri":[5],"Foniweitoro":[5],"Fontoru-Gbene":[1],"Freetown":[7],"Fungbene":[5],"Furopa":[5],"Ganigbene":[0],"Gbarain":[7],"Gbarama":[2],"Gbaramtoru":[7],"Gbaran":[5],"Gbene Ghama":[0],"Gboloketise":[5],"Glologbene":[5],"Gold Coast":[0],"Golubokiri":[0],"Guaregbene":[5],"Guorogbene":[0],"Hewigbene":[5],"Hittargbene":[5],"Hopin Point":[5],"Ibelebiekiri":[0],"Ibia":[7],"Ibikologbene":[5],"Ibtufra-Makiri":[0],"Idebugbene":[5],"Idema":[0],"Igbabele":[0],"Igbabopiri":[0],"Igbanwa":[2],"Igbedi":[2],"Igbeta-Ewoama":[3],"Igbo":[4],"Igbogene":[7],"Igbomatoru":[5],"Igoni":[6],"Ijawki":[0],"Ikarama":[7],"Ikebiri":[5],"Ikeingbabiri":[5],"Ikensi":[3],"Ikiambiri":[5],"Ikibiri":[7],"Ikolo":[7],"Ikoromogbene":[5],"Ikpidiama":[6],"Ikpirigbene":[5],"Imbiri":[0],"Imiringi":[4],"Iniedoyey-Ekiri":[0],"Isaiahkiri":[3],"Isaihgbene":[5],"Isampou":[1],"Iseleogona":[3],"Iserekiri":[3],"Isikara":[0],"Isreal o-Zion":[1],"Iwoama":[0],"Iyakiri":[4],"Izonagbene":[5],"Jackbiri":[7],"Jekegbene":[0],"Jermaih-gbene":[5],"Kabuke":[0],"Kaiama":[2,7],"Kalaba":[7],"Kalabilema":[0],"Kalarogbene":[5],"Kalawarigbene":[5],"Kallah Oroba Island":[0],"Kamboira Boria":[5],"Kamikiri":[0],"Kanan":[6],"Karama":[7],"Kasoma":[5],"Kemeligbene":[5],"Kemmers Town":[0],"Keregbene":[5],"Kinkiamabugo":[0],"Kirigupo":[0],"Kirikakiri":[0],"Kogbene":[5],"Kokologbene":[5],"Kolo":[4],"Koluama":[5],"Komobiama":[5],"Komoforagbene":[5],"Kongho":[0],"Korama":[7],"Korokorsei":[5],"Korumogbene":[5],"Kpangbokiri":[0],"Kpansia":[7],"Kugbogbene":[5],"Kurogbaba":[0],"Laisukugbene":[5],"Lalagbene":[1],"Lalgbene":[5],"Lasofa":[5],"Liama":[0],"Livergbene":[5],"Lobia":[5],"Location":[0],"Lofamagbene":[5],"Loinbirikibi":[5],"Luckygbene":[5],"Luduon":[5],"Mabokubu":[0],"Magbogbene":[5],"Mansiorkiri":[0],"Mbaskiri":[0],"Mileokiri":[0],"Mini":[3],"Minibeleu":[0],"Misakiri":[0],"Moborokiri":[0],"Monikiri":[0],"Munighakiri":[0],"Namatebe":[0],"Nampoju":[0],"Nembe":[3],"Nengigbene":[5],"Ngakoro":[5],"Ngukuiagbene":[5],"Nicholas-Gbene":[5],"Norhene":[1],"North Point":[5],"Nyanbiri":[7],"Nyuseyegbene":[5],"Oaroweiama":[0],"Obakilolo":[4],"Obama":[0],"Obelebiri":[4],"Obi":[0],"Obiama":[3],"Obiata":[3],"Obomikorogbene":[5],"Obrigbene":[1],"Obuaba":[4],"Obudogbene":[0],"Obungha":[7],"Odeigbene":[5],"Odekiri":[3],"Odioma":[0],"Odoni":[6],"Odị":[2],"Ofmiegbene":[5],"Ofo Market":[0],"Ofogbene":[5],"Ofoni":[6],"Ofonibiri":[2],"Ogalkiri":[0],"Ogbia":[4],"Ogboama":[4],"Ogbogbene":[1,5],"Ogbogero":[5],"Ogboidigbene":[5],"Ogboloma":[7],"Ogbonotroko":[0],"Ogbosuwar":[1],"Ogilagbene":[5],"Ogireyankiri":[4],"Ogobiri":[6],"Ogobokiriama":[6],"Ogodikoro":[5],"Ogolangorugbene":[5],"Ogoni":[6],"Ogoniforu":[7],"Ogoubiri":[5],"Ogu":[7],"Ohugbabiri":[5],"Oimiekiri":[0],"Ojogbolo":[7],"Okigbene":[5],"Okiinibiriba":[0],"Okiki":[4],"Okinbiriboteu":[0],"Okobotruo":[0],"Okoboudob":[5],"Okodi":[4],"Okokokiri":[3],"Okolobaa":[2],"Okolobiri":[7],"Okoribukio":[0],"Okoroba":[3],"Okorodia":[7],"Okotiama":[7],"Okparanaba":[0],"Okpoama":[0],"Okpofuwari":[5],"Okpokiri":[0],"Okpolububo":[5],"Okumbiri":[6],"Okutukutu":[7],"Olobia":[5],"Olobiri":[4],"Olobobene":[5],"Olodi":[5],"Ologi":[4],"Ologoghe":[4],"Ologoma":[3],"Oloibiri":[2],"Oloogbene":[5],"Oluaganagu":[4],"Olugama":[0],"Olugbobiri":[5],"Olugbogbene":[5],"Olukama":[0],"Olukugbene":[0],"Olusasiri":[3],"Omom":[7],"Omonikiri":[0],"Omugopogu":[0],"Ondewari":[5],"Onuebum":[4],"Onunu":[0],"Onunwypele":[0],"Onura":[7],"Onyoma":[5],"Opolo":[7],"Opolochi":[0],"Oporogbene":[5],"Oporoma":[1,5,0],"Opu Akassa":[0],"Opuama":[5],"Opukushi":[1],"Opume":[4],"Opuorubo":[0],"Orawo":[0],"Orikowe":[5],"Oro-Foniweitoro":[0],"Oromabiri":[3],"Orukiri":[0],"Orukutu":[0],"Oruma":[4],"Osiama":[5],"Osibiri":[6],"Osssiama":[6],"Osugbene":[0,5],"Otatubei":[0],"Otegila":[4],"Otegwe":[4],"Otolo":[0],"Otuabagi":[4],"Otuabai 1":[4],"Otuabula 1":[4],"Otuabula 11":[4],"Otuaganagu":[4],"Otuakeme":[4],"Otuan":[5],"Otuedu":[4],"Otuegwe":[4],"Otueke":[4],"Otuekpein":[4],"Otufor":[0],"Otumakiri":[3],"Otuogidi":[4],"Otuogori":[4],"Otuokpoti":[4],"Ovelemini":[7],"Oweikorogba":[5],"Oyeregbene":[5],"Oyiakiri":[1],"Oyobu":[2],"Ozezebiri":[5],"Paratubo":[5],"Pepegbene":[5],"Pepelegbene":[5],"Peremabiri":[5],"Peresisofogbene":[5],"Peretou-Gbene":[1],"Peribe":[0],"Petugbene":[5],"Philippo":[0],"Piebolegbene":[5],"Pisegbene":[5],"Polaku":[7],"Polobugo":[5],"Port-Harcourt-gbene":[5],"Qutar":[4],"Rituagbene Saugagbene":[5],"Sabagreia":[2],"Sabatoru":[3,0],"Saberugbene":[5],"Sagatama":[4],"Sagbama":[6],"Saikiri":[0],"Sampou":[2],"Sangakubu":[3],"Sangana":[0],"Sasuokiri":[0],"Segpe":[5],"Shellkiri":[3],"Sibiri":[5],"Sobo Camp":[4],"Sonamadingbene":[5],"Sonotubogbene":[5],"Sounkiri":[0],"Sowegbene":[0],"Spiffis Town":[0],"Sundaugbene":[5],"Sungbene":[5],"Tacadosgene":[5],"Talegbene":[5],"Tamogbene":[1],"Tamu-Gbene":[1],"Tana":[0],"Tangagae":[5],"Tarakiri":[1],"Tebitubufor":[5],"Teibidaba":[5],"Tein":[7],"Tengelkiri":[3],"Tengikiri":[0],"Tengikokiri":[3],"Tereke":[0],"Tietiegbene":[1],"Tipama":[5],"Tofiagbene":[5],"Tologbene":[5],"Tombi":[3],"Tombia":[7],"Tomgbene":[5],"Ton Kiri":[0],"Toru-Angiama":[6],"Toru-Ebeni":[6],"Toru-Foutorugbene":[1],"Toru-Ndoro":[1],"Toru-Orua":[6],"Trofani":[6],"Tuburu":[7],"Tuimpeigbene":[5],"Tuluama":[0],"Tungbabiri":[6],"Tungbo":[6],"Ukptatube":[5],"Ukubie":[5],"Wabokiri":[0],"Wagite":[0],"Warbugoama":[4],"Waribokikiri":[0],"Waribugo-gbene":[5],"Warise Gbene":[0],"Warri":[0],"Watchmangbene":[5],"Yedogbene":[5],"Yenegwe":[7],"Yeniozue-Epie":[7],"Zarama":[7],"Zarama Epie":[7],"sanekubo":[0]};
+const normC=s=>String(s||"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().replace(/[^a-z0-9]/g,"");
+const LGA_IDX={};for(const [c,ix] of Object.entries(COMMUNITY_LGA))LGA_IDX[normC(c)]={name:c,lgas:ix.map(i=>LGAS[i])};
+function lgaLookup(c){return LGA_IDX[normC(c)]||null}
+function lgaOf(r){if(r.lga)return r.lga;const h=lgaLookup(r.community);return h&&h.lgas.length===1?h.lgas[0]:""}
+function lgaOptions(cur,community){
+  const h=lgaLookup(community);const first=h?h.lgas:[];const rest=LGAS.filter(l=>!first.includes(l));
+  return `<option value="">${h&&h.lgas.length>1?"Choose: "+h.lgas.join(" or "):"Choose LGA"}</option>`+[...first,...rest].map(l=>`<option ${l===cur?"selected":""}>${esc(l)}</option>`).join("");
+}
+function autoLga(it){
+  const h=lgaLookup(it.community);
+  if(!h){if(it.lgaAuto)it.lga="";return}
+  if(it.community!==h.name&&it.community.trim().length)it.community=h.name;
+  if(h.lgas.length===1){if(!it.lga||it.lgaAuto){it.lga=h.lgas[0];it.lgaAuto=true}}
+  else if(it.lgaAuto||!h.lgas.includes(it.lga)){it.lga="";it.lgaAuto=true}
+}
+
 let canWrite=true, records=[], queue=[], openSerial=null;
 const keyOf=f=>String(f||"").trim().replace(/[^A-Za-z0-9_\-.~]+/g,"-").replace(/^[.-]+|[.-]+$/g,"").slice(0,120)||"x";
 const rk=r=>r.key||r.serial;
@@ -271,7 +290,7 @@ function addFiles(files){
   const first=document.querySelector(".qitem input");first&&first.focus();
 }
 function renderQueue(){
-  const q=$("#queue");
+  const q=$("#queue");queue.forEach(it=>{if(it.community&&!it.lga)autoLga(it)});
   q.innerHTML=queue.map(it=>`
     <div class="qitem" data-key="${it.key}">
       <img src="${it.url}" alt="New capture">
@@ -280,6 +299,7 @@ function renderQueue(){
         <div class="field"><label for="o_${it.key}">Name *</label><input id="o_${it.key}" data-f="owner" value="${esc(it.owner)}" placeholder="Owner's full name"></div>
         <div class="field"><label for="p_${it.key}">Phone number</label><input id="p_${it.key}" data-f="phone" inputmode="tel" value="${esc(it.phone)}" placeholder="080…"></div>
         <div class="field"><label for="c_${it.key}">Community</label><input id="c_${it.key}" data-f="community" value="${esc(it.community)}" list="areaList"></div>
+        <div class="field"><label for="l_${it.key}">LGA</label><select id="l_${it.key}" data-f="lga">${lgaOptions(it.lga,it.community)}</select></div>
       </div>
       <div class="qactions">
         <button class="btn" data-act="save" type="button" ${it.busy?"disabled":""}>Save</button>
@@ -290,7 +310,11 @@ function renderQueue(){
   $("#qfoot").hidden=$("#capbar").hidden=!queue.length;
   $("#qcount").textContent=queue.length+(queue.length===1?" photo waiting":" photos waiting");
 }
-$("#queue").addEventListener("input",e=>{const f=e.target.dataset.f;if(!f)return;const it=queue.find(x=>x.key===e.target.closest(".qitem").dataset.key);it[f]=e.target.value});
+$("#queue").addEventListener("input",e=>{const f=e.target.dataset.f;if(!f)return;const row=e.target.closest(".qitem");const it=queue.find(x=>x.key===row.dataset.key);it[f]=e.target.value;
+  if(f==="lga")it.lgaAuto=false;
+  if(f==="community"){const before=it.community;autoLga(it);it.community=before;const sel=row.querySelector('[data-f="lga"]');sel.innerHTML=lgaOptions(it.lga,it.community);}
+});
+$("#queue").addEventListener("change",e=>{if(e.target.dataset.f!=="community")return;const row=e.target.closest(".qitem");const it=queue.find(x=>x.key===row.dataset.key);autoLga(it);e.target.value=it.community;row.querySelector('[data-f="lga"]').innerHTML=lgaOptions(it.lga,it.community)});
 $("#queue").addEventListener("click",async e=>{
   const b=e.target.closest("button");if(!b)return;
   const key=b.closest(".qitem").dataset.key;const it=queue.find(x=>x.key===key);
@@ -335,6 +359,7 @@ function parseCaption(t){
   if(m=t.match(/form\s*(?:no\.?|num(?:ber)?\.?|#)\s*[:.\-]?\s*([A-Za-z0-9\/\-]+)/i))o.formNo=m[1];
   if(m=t.match(/(?:^|[\n\r]|:\s)[^\S\n]*(?:owner'?s?\s+)?(?:full\s+)?name\s*[:\-]\s*([^\n\r]+)/i))o.owner=m[1].trim().replace(/[.\s]+$/,"");
   if(m=t.match(/community\s*[:\-]\s*([^\n\r]+)/i))o.community=m[1].trim().replace(/[.\s]+$/,"");
+  if(m=t.match(/\bL\.?G\.?A\.?\s*[:\-]\s*([^\n\r]+)/i)){const v=normC(m[1]);const hit=LGAS.find(l=>normC(l)===v||normC(l).startsWith(v)||v.startsWith(normC(l)));if(hit)o.lga=hit}
   const ph=findPhone(t,o.formNo);
   if(ph)o.phone=ph;
   else{
@@ -356,6 +381,7 @@ function splitCaptions(t){
 }
 function applyCaption(it,o){
   ["formNo","owner","phone","community","agent"].forEach(k=>{if(o[k])it[k]=o[k]});
+  if(o.lga){it.lga=o.lga;it.lgaAuto=false}else if(o.community){it.lgaAuto=true;it.lga="";autoLga(it)}
   it.dupOk=false;it.phoneWarn=!!o.phoneWarn;
   const got=[o.formNo&&"form",o.owner&&"name",o.phone&&"phone"].filter(Boolean);
   it.status=got.length?(it.phoneWarn?`Phone ${it.phone} has ${it.phone.length} digits, not 11. Check it.`:"Filled from caption. Check it."):"No details found in that caption";it.err=!got.length||it.phoneWarn;it.ok=!!got.length&&!it.phoneWarn;
@@ -473,7 +499,7 @@ async function saveItem(it,quiet){
     await putPhoto(photoId,blob);persist();
     await putRec({
       key,dli:"DLI 1.3A",formNo:it.formNo.trim(),owner:it.owner.trim(),phone:it.phone.trim(),
-      community:(it.community||$("#dArea").value).trim(),leadAgent:($("#dLead").value.trim()||"Mr Agala"),agent:(it.agent||$("#dAgent").value).trim(),captured:it.captured||$("#dDate").value||today(),
+      community:(it.community||$("#dArea").value).trim(),lga:it.lga||lgaOf({community:(it.community||$("#dArea").value)}),leadAgent:($("#dLead").value.trim()||"Mr Agala"),agent:(it.agent||$("#dAgent").value).trim(),captured:it.captured||$("#dDate").value||today(),
       photo:photoId,createdAt:new Date().toISOString()
     });
     await reload();
@@ -512,13 +538,13 @@ let askedPersist=false;
 function persist(){if(askedPersist)return;askedPersist=true;try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}}
 
 /* ---------- Registry ---------- */
-["q","fArea","fAgent","sort"].forEach(id=>$("#"+id).addEventListener("input",render));
+["q","fLga","fArea","fAgent","sort"].forEach(id=>$("#"+id).addEventListener("input",render));
 function uniq(f){return [...new Set(records.map(r=>r[f]).filter(Boolean))].sort((a,b)=>a.localeCompare(b))}
 function fillSelect(id,vals,label){const s=$("#"+id),cur=s.value;s.innerHTML=`<option value="">${label}</option>`+vals.map(v=>`<option ${v===cur?"selected":""}>${esc(v)}</option>`).join("")}
 function filtered(){
-  const q=$("#q").value.toLowerCase().trim(),a=$("#fArea").value,g=$("#fAgent").value,s=$("#sort").value;
-  let list=records.filter(r=>(!a||r.community===a)&&(!g||r.agent===g)&&
-    (!q||[r.formNo,r.owner,r.phone,r.leadAgent,r.agent].join(" ").toLowerCase().includes(q)));
+  const q=$("#q").value.toLowerCase().trim(),lf=$("#fLga").value,a=$("#fArea").value,g=$("#fAgent").value,s=$("#sort").value;
+  let list=records.filter(r=>(!lf||lgaOf(r)===lf)&&(!a||r.community===a)&&(!g||r.agent===g)&&
+    (!q||[r.formNo,r.owner,r.phone,r.community,lgaOf(r),r.leadAgent,r.agent].join(" ").toLowerCase().includes(q)));
   const t=r=>r.createdAt||"";
   list.sort(s==="name"?(x,y)=>(x.owner||x.name||"").localeCompare(y.owner||y.name||""):s==="form"?byForm:s==="asc"?(x,y)=>t(x).localeCompare(t(y)):(x,y)=>t(y).localeCompare(t(x)));
   return list;
@@ -530,8 +556,8 @@ function render(){
   $("#sWeek").textContent=records.filter(r=>new Date(r.captured||r.createdAt).getTime()>=weekAgo).length;
   const areas=uniq("community"),agents=uniq("agent");
   $("#sAreas").textContent=areas.length;$("#sAgents").textContent=agents.length;
-  fillSelect("fArea",areas,"All communities");fillSelect("fAgent",agents,"All agents");
-  $("#areaList").innerHTML=areas.map(a=>`<option value="${esc(a)}">`).join("");
+  fillSelect("fLga",[...new Set(records.map(lgaOf).filter(Boolean))].sort(),"All LGAs");fillSelect("fArea",areas,"All communities");fillSelect("fAgent",agents,"All agents");
+  $("#areaList").innerHTML=[...new Set([...areas,...Object.keys(COMMUNITY_LGA)])].map(a=>`<option value="${esc(a)}">${esc(lgaLookup(a)?lgaLookup(a).lgas.join(" / "):"")}</option>`).join("");
   const list=filtered();
   $("#empty").hidden=records.length>0;
   $("#grid").innerHTML=records.length&&!list.length?`<p class="muted">No businesses match those filters.</p>`:list.map(r=>`
@@ -540,7 +566,7 @@ function render(){
       <div class="body">
         <div class="name">${esc(r.owner||r.name)}</div>
         <div class="owner">${esc(r.phone||"")}${r.phone&&!/^0[789]\d{9}$/.test(r.phone)?' <span class="chip warn">Check phone</span>':""}</div>
-        <div class="meta">${[r.community,r.leadAgent&&("Lead: "+r.leadAgent),r.agent&&("by "+r.agent),r.captured].filter(Boolean).map(m=>`<span class="chip">${esc(m)}</span>`).join("")}</div>
+        <div class="meta">${[[r.community,lgaOf(r)].filter(Boolean).join(", "),r.leadAgent&&("Lead: "+r.leadAgent),r.agent&&("by "+r.agent),r.captured].filter(Boolean).map(m=>`<span class="chip">${esc(m)}</span>`).join("")}</div>
       </div>
     </button>`).join("");
   $("#csvBtn").disabled=$("#zipBtn").disabled=$("#xlsxBtn").disabled=!records.length;
@@ -565,6 +591,7 @@ function openDetail(serial,refresh){
         <div class="field"><label for="eOwner">Name</label><input id="eOwner" value="${esc(r.owner)}" ${ro}></div>
         <div class="field"><label for="ePhone">Phone number</label><input id="ePhone" value="${esc(r.phone)}" inputmode="tel" ${ro}></div>
         <div class="field"><label for="eArea">Community</label><input id="eArea" value="${esc(r.community)}" list="areaList" ${ro}></div>
+        <div class="field"><label for="eLga">LGA</label><select id="eLga" ${ro}>${lgaOptions(lgaOf(r),r.community)}</select></div>
         <div class="field"><label for="eLead">Lead agent</label><input id="eLead" value="${esc(r.leadAgent||"")}" ${ro}></div>
         <div class="field"><label for="eAgent">Field agent</label><input id="eAgent" value="${esc(r.agent)}" ${ro}></div>
         <div class="field"><label for="eDate">Date captured</label><input id="eDate" type="date" value="${esc(r.captured)}" ${ro}></div>
@@ -574,13 +601,14 @@ function openDetail(serial,refresh){
   </div>`;
   hydrate($("#detail"));
   $("#closeD").onclick=closeDetail;
+  const eA=$("#eArea");if(eA)eA.addEventListener("change",()=>{const h=lgaLookup(eA.value);if(h){eA.value=h.name;$("#eLga").innerHTML=lgaOptions(h.lgas.length===1?h.lgas[0]:"",h.name)}});
   $("#detail .overlay").onclick=e=>{if(e.target.classList.contains("overlay"))closeDetail()};
   if(!canWrite)return;
   $("#editForm").onsubmit=async e=>{
     e.preventDefault();
     try{
       const fields={owner:$("#eOwner").value.trim()||r.owner,formNo:$("#eForm").value.trim()||r.formNo,phone:$("#ePhone").value.trim(),
-        community:$("#eArea").value.trim(),leadAgent:$("#eLead").value.trim(),agent:$("#eAgent").value.trim(),captured:$("#eDate").value};
+        community:$("#eArea").value.trim(),lga:$("#eLga").value,leadAgent:$("#eLead").value.trim(),agent:$("#eAgent").value.trim(),captured:$("#eDate").value};
       const nk=keyOf(fields.formNo);
       if(nk!==serial){
         if(records.some(x=>rk(x)===nk)||(await getRec(nk))){toast(`Form ${fields.formNo} is already in the registry.`);return}
@@ -605,10 +633,10 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape"&&openSerial)closeDet
 
 /* ---------- Export ---------- */
 function csv(list){
-  const cols=["formNo","dli","owner","phone","community","leadAgent","agent","captured","photo_file"];
-  const head=["Form Number","DLI","Name","Phone Number","Community","Lead agent","Field agent","Date captured","Photo file"];
+  const cols=["formNo","dli","owner","phone","community","lga","leadAgent","agent","captured","photo_file"];
+  const head=["Form Number","DLI","Name","Phone Number","Community","LGA","Lead agent","Field agent","Date captured","Photo file"];
   const q=v=>{v=String(v??"");return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
-  return "﻿"+[head.join(","),...list.map(r=>cols.map(c=>q(c==="photo_file"?photoName(r):c==="dli"?(r.dli||"DLI 1.3A"):c==="phone"&&r.phone?"\t"+r.phone:r[c])).join(","))].join("\r\n");
+  return "﻿"+[head.join(","),...list.map(r=>cols.map(c=>q(c==="photo_file"?photoName(r):c==="dli"?(r.dli||"DLI 1.3A"):c==="lga"?lgaOf(r):c==="phone"&&r.phone?"\t"+r.phone:r[c])).join(","))].join("\r\n");
 }
 const photoName=r=>`${clean(r.formNo)||rk(r)} - ${clean(r.owner||r.name)||"business"}.jpg`;
 function save(filename,data){
@@ -678,8 +706,8 @@ async function thumb(blob,max=360){
   return {blob:b,w:c.width,h:c.height};
 }
 async function buildXlsx(list,onStep){
-  const COLS=[["Photo",26],["Form Number",14],["DLI",10],["Name",28],["Phone Number",16],["Community",16],["Lead agent",14],["Field agent",18],["Date captured",14]];
-  const L="ABCDEFGHI";const zip=new JSZip();const EMU=9525,BOXW=170,BOXH=140,PAD=4;
+  const COLS=[["Photo",26],["Form Number",14],["DLI",10],["Name",28],["Phone Number",16],["Community",16],["LGA",16],["Lead agent",14],["Field agent",18],["Date captured",14]];
+  const L="ABCDEFGHIJ";const zip=new JSZip();const EMU=9525,BOXW=170,BOXH=140,PAD=4;
   const rows=[`<row r="1" ht="22" customHeight="1">${COLS.map((c,i)=>`<c r="${L[i]}1" t="inlineStr" s="1"><is><t>${xe(c[0])}</t></is></c>`).join("")}</row>`];
   const anchors=[],rels=[];let missing=0;
   for(let i=0;i<list.length;i++){
@@ -694,7 +722,7 @@ async function buildXlsx(list,onStep){
       anchors.push(`<xdr:oneCellAnchor><xdr:from><xdr:col>0</xdr:col><xdr:colOff>${PAD*EMU}</xdr:colOff><xdr:row>${rn-1}</xdr:row><xdr:rowOff>${PAD*EMU}</xdr:rowOff></xdr:from><xdr:ext cx="${w*EMU}" cy="${hh*EMU}"/><xdr:pic><xdr:nvPicPr><xdr:cNvPr id="${n+1}" name="Photo ${xe(r.formNo)}"/><xdr:cNvPicPr><a:picLocks noChangeAspect="1"/></xdr:cNvPicPr></xdr:nvPicPr><xdr:blipFill><a:blip r:embed="rId${n}"/><a:stretch><a:fillRect/></a:stretch></xdr:blipFill><xdr:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${w*EMU}" cy="${hh*EMU}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></xdr:spPr></xdr:pic><xdr:clientData/></xdr:oneCellAnchor>`);
       h=hh;
     }catch(e){missing++}
-    const vals=["",r.formNo,r.dli||"DLI 1.3A",r.owner||r.name,r.phone,r.community,r.leadAgent,r.agent,r.captured];
+    const vals=["",r.formNo,r.dli||"DLI 1.3A",r.owner||r.name,r.phone,r.community,lgaOf(r),r.leadAgent,r.agent,r.captured];
     rows.push(`<row r="${rn}" ht="${((h+PAD*2)*0.75).toFixed(1)}" customHeight="1">${vals.map((v,j)=>`<c r="${L[j]}${rn}" t="inlineStr" s="2"><is><t>${xe(v)}</t></is></c>`).join("")}</row>`);
   }
   const NS='xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"';
