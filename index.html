@@ -111,6 +111,7 @@ header .lede{max-width:56ch;margin:8px 0 0;color:var(--muted)}
 .rec .name{font-family:var(--f-display);font-weight:600;font-size:17px;line-height:1.25;overflow-wrap:anywhere}
 .rec .owner{color:var(--muted);font-size:14px;overflow-wrap:anywhere}
 .rec .meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.chip.warn{color:var(--warn);border-color:var(--warn)}
 .chip{font-size:12px;padding:2px 8px;border-radius:99px;background:var(--paper);border:1px solid var(--line);color:var(--muted)}
 
 .empty{border:1px solid var(--line);border-radius:14px;background:var(--card);padding:32px;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:24px}
@@ -333,7 +334,17 @@ function parseCaption(t){
   if(m=t.match(/form\s*(?:no\.?|num(?:ber)?\.?|#)\s*[:.\-]?\s*([A-Za-z0-9\/\-]+)/i))o.formNo=m[1];
   if(m=t.match(/(?:^|[\n\r]|:\s)[^\S\n]*(?:owner'?s?\s+)?(?:full\s+)?name\s*[:\-]\s*([^\n\r]+)/i))o.owner=m[1].trim().replace(/[.\s]+$/,"");
   if(m=t.match(/community\s*[:\-]\s*([^\n\r]+)/i))o.community=m[1].trim().replace(/[.\s]+$/,"");
-  const ph=findPhone(t,o.formNo);if(ph)o.phone=ph;
+  const ph=findPhone(t,o.formNo);
+  if(ph)o.phone=ph;
+  else{
+    const fd=String(o.formNo||"").replace(/\D/g,"");
+    for(const line of t.split("\n")){
+      if(/form\s*(?:no|num)|DLI\s*\d|^\s*\[|\d{1,2}[\/.]\d{1,2}[\/.]\d{2,4}/i.test(line))continue;
+      const mm=line.match(/\+?\d[\d\s\-.()]{5,18}\d/);if(!mm)continue;
+      const d=mm[0].replace(/\D/g,"");
+      if(d.length>=7&&d.length<=14&&d!==fd){o.phone=d;o.phoneWarn=true;break}
+    }
+  }
   return o;
 }
 function splitCaptions(t){
@@ -344,9 +355,9 @@ function splitCaptions(t){
 }
 function applyCaption(it,o){
   ["formNo","owner","phone","community","agent"].forEach(k=>{if(o[k])it[k]=o[k]});
-  it.dupOk=false;
+  it.dupOk=false;it.phoneWarn=!!o.phoneWarn;
   const got=[o.formNo&&"form",o.owner&&"name",o.phone&&"phone"].filter(Boolean);
-  it.status=got.length?"Filled from caption. Check it.":"No details found in that caption";it.err=!got.length;it.ok=!!got.length;
+  it.status=got.length?(it.phoneWarn?`Phone ${it.phone} has ${it.phone.length} digits, not 11. Check it.`:"Filled from caption. Check it."):"No details found in that caption";it.err=!got.length||it.phoneWarn;it.ok=!!got.length&&!it.phoneWarn;
 }
 function fillFromText(t){
   const caps=splitCaptions(t);
@@ -422,7 +433,7 @@ async function importChat(files){
       if(!blob.type)blob=new Blob([blob],{type:/\.png$/i.test(ph.name)?"image/png":"image/jpeg"});
       const it={key:Math.random().toString(36).slice(2),file:blob,url:URL.createObjectURL(blob),owner:"",formNo:"",phone:"",agent:ph.m.sender,
         community:$("#dArea").value.trim(),captured:ph.m.date,status:""};
-      if(ph.cap){applyCaption(it,c);it.agent=ph.m.sender;it.status=`From ${ph.m.sender}, ${ph.m.date} ${ph.m.time}. `+(it.phone?"Check it.":"No phone number in the caption; add it if you have it.")}
+      if(ph.cap){applyCaption(it,c);it.agent=ph.m.sender;it.status=`From ${ph.m.sender}, ${ph.m.date} ${ph.m.time}. `+(it.phoneWarn?`Phone ${it.phone} has ${it.phone.length} digits, not 11. Check it with the agent.`:it.phone?"Check it.":"No phone number in the caption; add it if you have it.")}
       else{nocap++;it.status="No caption found for this photo. Type the details.";it.err=true}
       queue.push(it);added++;
     }
@@ -527,7 +538,7 @@ function render(){
       <div class="ph">${r.photo?`<img data-photo="${esc(r.photo)}" alt="${esc(r.owner||r.name)}" onerror="this.remove()">`:""}<span class="serial">FORM ${esc(r.formNo)}</span></div>
       <div class="body">
         <div class="name">${esc(r.owner||r.name)}</div>
-        <div class="owner">${esc(r.phone||"")}</div>
+        <div class="owner">${esc(r.phone||"")}${r.phone&&!/^0[789]\d{9}$/.test(r.phone)?' <span class="chip warn">Check phone</span>':""}</div>
         <div class="meta">${[r.community,r.leadAgent&&("Lead: "+r.leadAgent),r.agent&&("by "+r.agent),r.captured].filter(Boolean).map(m=>`<span class="chip">${esc(m)}</span>`).join("")}</div>
       </div>
     </button>`).join("");
