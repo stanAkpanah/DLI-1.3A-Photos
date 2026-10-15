@@ -219,6 +219,7 @@ textarea{color:inherit}
         <input id="restoreIn" type="file" accept=".zip,application/zip" hidden>
         <button class="btn ghost" id="restoreBtn" type="button">Restore backup</button>
         <button class="btn ghost" id="csvBtn" type="button">Download list (.csv)</button>
+        <button class="btn ghost" id="xlsxBtn" type="button">Download Excel with photos</button>
         <button class="btn" id="zipBtn" type="button">Download folder (.zip)</button>
       </div>
     </div>
@@ -542,7 +543,7 @@ function render(){
         <div class="meta">${[r.community,r.leadAgent&&("Lead: "+r.leadAgent),r.agent&&("by "+r.agent),r.captured].filter(Boolean).map(m=>`<span class="chip">${esc(m)}</span>`).join("")}</div>
       </div>
     </button>`).join("");
-  $("#csvBtn").disabled=$("#zipBtn").disabled=!records.length;
+  $("#csvBtn").disabled=$("#zipBtn").disabled=$("#xlsxBtn").disabled=!records.length;
   hydrate($("#grid"));
   if(openSerial)openDetail(openSerial,true);
 }
@@ -624,10 +625,12 @@ $("#zipBtn").onclick=async()=>{
   let i=0,missing=0;
   for(const r of list){
     b.textContent=`Packing ${++i} of ${list.length}…`;
-    try{const b=await getPhoto(r.photo);if(!b)throw 0;photos.file(photoName(r),b)}catch(e){missing++}
+    try{photos.file(photoName(r),await photoBlob(r))}catch(e){missing++}
   }
   root.file("registry.csv",csv(list));
   root.file("backup/registry.json",JSON.stringify({app:"dli13a-field-registry",version:1,exported:new Date().toISOString(),records:list.map(r=>({...r,photoFile:"photos/"+photoName(r)}))},null,1));
+  b.textContent="Building Excel…";
+  try{root.file("registry.xlsx",(await buildXlsx(list)).blob)}catch(e){}
   b.textContent="Compressing…";
   const out=await zip.generateAsync({type:"blob"});
   b.textContent=label;b.disabled=false;
@@ -663,6 +666,62 @@ function backupNote(){
   let last="";try{last=localStorage.getItem("fr_lastBackup")||""}catch(e){}
   $("#localNote").textContent="Records are kept in this browser on this device. "+(last?`Last folder download: ${new Date(last).toLocaleString()}. `:"")+"Download the folder regularly as your backup.";
 }
+
+/* ---------- Excel workbook with photos (hand-built .xlsx) ---------- */
+async function photoBlob(r){const b=await getPhoto(r.photo);if(!b)throw 0;return b}
+const xe=v=>String(v??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])).replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g,"");
+async function thumb(blob,max=360){
+  const bmp=await createImageBitmap(blob);const k=Math.min(1,max/Math.max(bmp.width,bmp.height));
+  const c=document.createElement("canvas");c.width=Math.round(bmp.width*k);c.height=Math.round(bmp.height*k);
+  c.getContext("2d").drawImage(bmp,0,0,c.width,c.height);
+  const b=await new Promise(r=>c.toBlob(r,"image/jpeg",.82));
+  return {blob:b,w:c.width,h:c.height};
+}
+async function buildXlsx(list,onStep){
+  const COLS=[["Photo",26],["Form Number",14],["DLI",10],["Name",28],["Phone Number",16],["Community",16],["Lead agent",14],["Field agent",18],["Date captured",14]];
+  const L="ABCDEFGHI";const zip=new JSZip();const EMU=9525,BOXW=170,BOXH=140,PAD=4;
+  const rows=[`<row r="1" ht="22" customHeight="1">${COLS.map((c,i)=>`<c r="${L[i]}1" t="inlineStr" s="1"><is><t>${xe(c[0])}</t></is></c>`).join("")}</row>`];
+  const anchors=[],rels=[];let missing=0;
+  for(let i=0;i<list.length;i++){
+    const r=list[i],rn=i+2;onStep&&onStep(i+1,list.length);
+    let h=BOXH;
+    try{
+      const t=await thumb(await photoBlob(r));
+      const k=Math.min(BOXW/t.w,BOXH/t.h),w=Math.round(t.w*k),hh=Math.round(t.h*k);
+      const n=anchors.length+1;
+      zip.file(`xl/media/image${n}.jpeg`,t.blob);
+      rels.push(`<Relationship Id="rId${n}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image${n}.jpeg"/>`);
+      anchors.push(`<xdr:oneCellAnchor><xdr:from><xdr:col>0</xdr:col><xdr:colOff>${PAD*EMU}</xdr:colOff><xdr:row>${rn-1}</xdr:row><xdr:rowOff>${PAD*EMU}</xdr:rowOff></xdr:from><xdr:ext cx="${w*EMU}" cy="${hh*EMU}"/><xdr:pic><xdr:nvPicPr><xdr:cNvPr id="${n+1}" name="Photo ${xe(r.formNo)}"/><xdr:cNvPicPr><a:picLocks noChangeAspect="1"/></xdr:cNvPicPr></xdr:nvPicPr><xdr:blipFill><a:blip r:embed="rId${n}"/><a:stretch><a:fillRect/></a:stretch></xdr:blipFill><xdr:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${w*EMU}" cy="${hh*EMU}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></xdr:spPr></xdr:pic><xdr:clientData/></xdr:oneCellAnchor>`);
+      h=hh;
+    }catch(e){missing++}
+    const vals=["",r.formNo,r.dli||"DLI 1.3A",r.owner||r.name,r.phone,r.community,r.leadAgent,r.agent,r.captured];
+    rows.push(`<row r="${rn}" ht="${((h+PAD*2)*0.75).toFixed(1)}" customHeight="1">${vals.map((v,j)=>`<c r="${L[j]}${rn}" t="inlineStr" s="2"><is><t>${xe(v)}</t></is></c>`).join("")}</row>`);
+  }
+  const NS='xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"';
+  zip.file("[Content_Types].xml",`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="jpeg" ContentType="image/jpeg"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>${anchors.length?'<Override PartName="/xl/drawings/drawing1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/>':""}</Types>`);
+  zip.file("_rels/.rels",`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`);
+  zip.file("xl/workbook.xml",`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook ${NS}><sheets><sheet name="DLI 1.3A Registry" sheetId="1" r:id="rId1"/></sheets></workbook>`);
+  zip.file("xl/_rels/workbook.xml.rels",`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`);
+  zip.file("xl/styles.xml",`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF2343B8"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left/><right/><top/><bottom style="thin"><color rgb="FFD8DED6"/></bottom><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="3"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="49" fontId="1" fillId="2" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyAlignment="1"><alignment vertical="center"/></xf><xf numFmtId="49" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1" applyAlignment="1"><alignment vertical="center" wrapText="1"/></xf></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`);
+  zip.file("xl/worksheets/sheet1.xml",`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet ${NS}><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><sheetFormatPr defaultRowHeight="15"/><cols>${COLS.map((c,i)=>`<col min="${i+1}" max="${i+1}" width="${c[1]}" customWidth="1"/>`).join("")}</cols><sheetData>${rows.join("")}</sheetData>${anchors.length?'<drawing r:id="rId1"/>':""}</worksheet>`);
+  if(anchors.length){
+    zip.file("xl/worksheets/_rels/sheet1.xml.rels",`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../drawings/drawing1.xml"/></Relationships>`);
+    zip.file("xl/drawings/drawing1.xml",`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">${anchors.join("")}</xdr:wsDr>`);
+    zip.file("xl/drawings/_rels/drawing1.xml.rels",`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${rels.join("")}</Relationships>`);
+  }
+  const blob=await zip.generateAsync({type:"blob",mimeType:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+  return {blob,missing};
+}
+$("#xlsxBtn").onclick=async()=>{
+  if(!window.JSZip){toast("The zip tool didn't load. Reload the page.");return}
+  const b=$("#xlsxBtn"),label=b.textContent;b.disabled=true;
+  try{
+    const {blob,missing}=await buildXlsx(filtered().sort(byForm),(i,n)=>b.textContent=`Adding photo ${i} of ${n}…`);
+    if(missing)toast(`${missing} photo(s) couldn't be added.`);
+    await save(`DLI-1.3A-registry-${today()}.xlsx`,blob);
+  }catch(e){toast("Couldn't build the Excel file. Try again.")}
+  finally{b.textContent=label;b.disabled=false}
+};
 
 /* ---------- Boot ---------- */
 function banner(msg){const s=$("#status");s.textContent=msg;s.hidden=!msg}
