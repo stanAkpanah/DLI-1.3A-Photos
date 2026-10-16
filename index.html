@@ -109,6 +109,10 @@ header .lede{max-width:56ch;margin:8px 0 0;color:var(--muted)}
 .tallybar{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin:10px 0}
 .tallybar .field{flex:0 1 220px}
 .copybox{width:100%;min-height:140px;margin-top:8px;font:13px var(--f-mono);border:1px solid var(--line);border-radius:7px;background:var(--card);color:var(--ink)}
+.danger{max-width:1180px;margin:40px auto 0;border:1px solid var(--warn);border-radius:12px;padding:16px 18px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+.danger h2{font-size:17px;color:var(--warn)}
+.danger .hint{max-width:70ch;margin:4px 0 0}
+.danger .confirm{flex-basis:100%}
 .qfoot{display:flex;flex-wrap:wrap;gap:12px;justify-content:flex-end;align-items:center}
 
 /* Toolbar */
@@ -262,6 +266,17 @@ textarea{color:inherit}
     </div>
   </section>
 </div>
+<section class="danger" id="dangerBox">
+  <div><h2>Start over</h2><p class="hint">Deletes every record and photo in this registry, and forgets which WhatsApp photos were imported, so you can import your chats again from scratch. Download the folder first if you want a copy.</p></div>
+  <div class="danger-actions"><button class="btn danger" id="clearBtn" type="button">Clear registry…</button></div>
+  <div id="clearConfirm" hidden class="confirm">
+    <span id="clearMsg"></span>
+    <label for="clearWord" class="hint">Type CLEAR to confirm</label>
+    <input id="clearWord" autocomplete="off" style="max-width:140px">
+    <button class="btn danger" id="clearYes" type="button" disabled>Delete everything</button>
+    <button class="btn ghost" id="clearNo" type="button">Keep my records</button>
+  </div>
+</section>
 <p class="hint" style="max-width:1180px;margin:24px auto 0">Version 16 Oct 2026 · every photo accounted for</p>
 <datalist id="areaList"></datalist>
 <div id="detail"></div>
@@ -918,6 +933,19 @@ $("#xlsxBtn").onclick=async()=>{
     await save(`DLI-1.3A-registry-${today()}.xlsx`,blob);
   }catch(e){toast("Couldn't build the Excel file. Try again.")}
   finally{b.textContent=label;b.disabled=false}
+};
+
+/* ---------- Clear registry ---------- */
+async function wipeAll(onStep){onStep(1,1);for(const st of ["records","photos","meta"])await idb(st,"readwrite",x=>x.clear());for(const u of Object.values(photoURLs))URL.revokeObjectURL(u);for(const k in photoURLs)delete photoURLs[k];await reload()}
+$("#clearBtn").onclick=()=>{$("#clearConfirm").hidden=false;$("#clearMsg").textContent=`This deletes all ${records.length} record${records.length===1?"":"s"} and their photos. It can't be undone.`;$("#clearWord").value="";$("#clearYes").disabled=true;$("#clearWord").focus()};
+$("#clearNo").onclick=()=>{$("#clearConfirm").hidden=true};
+$("#clearWord").addEventListener("input",e=>{$("#clearYes").disabled=e.target.value.trim().toUpperCase()!=="CLEAR"});
+$("#clearYes").onclick=async()=>{
+  const b=$("#clearYes");b.disabled=true;
+  try{await wipeAll((i,n)=>b.textContent=`Deleting ${i} of ${n}…`);lastReport=null;renderReport();queue.forEach(q=>URL.revokeObjectURL(q.url));queue=[];renderQueue();
+    $("#clearConfirm").hidden=true;toast("Registry cleared. Import your WhatsApp chats again to start fresh.")}
+  catch(e){toast("Couldn't delete everything. Try again.")}
+  finally{b.textContent="Delete everything"}
 };
 
 /* ---------- Boot ---------- */
