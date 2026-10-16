@@ -92,6 +92,23 @@ header .lede{max-width:56ch;margin:8px 0 0;color:var(--muted)}
 .howto ol{margin:10px 0 4px;padding-left:20px;display:flex;flex-direction:column;gap:6px;color:var(--muted)}
 .howto b{color:var(--ink)}
 .linkbtn{background:none;border:0;padding:0;color:var(--stamp);text-decoration:underline;font:inherit;cursor:pointer}
+.stat.attn.on b,.stat.attn.on span{color:var(--warn)}
+.rec.attn{border-color:var(--warn);border-width:2px}
+.serial.bad{color:var(--warn);border-color:var(--warn)}
+.report{border:1px solid var(--line);border-radius:12px;background:var(--card);padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.report-head{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;align-items:flex-start}
+.report h3{margin:0;font-family:var(--f-display);font-size:18px}
+.report-actions{display:flex;gap:8px;flex-wrap:wrap}
+.tablewrap{overflow-x:auto}
+.tally{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:14px}
+.tally th{text-align:left;font-size:12px;color:var(--muted);font-weight:600;letter-spacing:.04em;padding:6px 10px;border-bottom:1px solid var(--line)}
+.tally td{padding:7px 10px;border-bottom:1px solid var(--line)}
+.tally tr.tot td{font-weight:600;border-bottom:0}
+.attnlist{margin:0;padding-left:18px;color:var(--muted);font-size:14px;display:flex;flex-direction:column;gap:3px}
+.attnlist b{color:var(--ink)}
+.tallybar{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin:10px 0}
+.tallybar .field{flex:0 1 220px}
+.copybox{width:100%;min-height:140px;margin-top:8px;font:13px var(--f-mono);border:1px solid var(--line);border-radius:7px;background:var(--card);color:var(--ink)}
 .qfoot{display:flex;flex-wrap:wrap;gap:12px;justify-content:flex-end;align-items:center}
 
 /* Toolbar */
@@ -159,6 +176,7 @@ textarea{color:inherit}
       <div class="stat"><b id="sWeek">0</b><span>This week</span></div>
       <div class="stat"><b id="sAreas">0</b><span>Communities</span></div>
       <div class="stat"><b id="sAgents">0</b><span>Agents</span></div>
+      <div class="stat attn"><b id="sAttn">0</b><span>Need attention</span></div>
     </div>
   </header>
 
@@ -184,6 +202,7 @@ textarea{color:inherit}
         <li>On your phone, open the WhatsApp chat (or group) where the team sends captures.</li>
         <li><b>Android:</b> tap ⋮ → More → Export chat → <b>Include media</b>. <b>iPhone:</b> tap the chat name → Export Chat → <b>Attach Media</b>.</li>
         <li>Save the export to your phone (Files or Drive), or send it to yourself.</li>
+        <li>After each import, an <b>Import receipt</b> shows how many photos each agent sent and what happened to every one. Tap <b>Copy for WhatsApp</b> to send it to the group.</li>
         <li>Tap <b>Import WhatsApp chat</b> and choose the .zip (or the .txt plus the photos). Each photo is matched with its caption, sender and date. The registry remembers every photo it has imported: photos you saved or removed are skipped next time, so you can import the same chat again each day and only new ones appear.</li>
       </ol>
       <p class="hint">Removed a photo by mistake? <button class="linkbtn" id="forgetBtn" type="button">Let removed photos come back</button></p>
@@ -202,6 +221,7 @@ textarea{color:inherit}
       </div>
       <p class="hint" style="flex-basis:100%">Copy one or several captions from WhatsApp and paste them here; they fill the photos below in order. You can also paste a caption straight into any photo's boxes.</p>
     </div>
+    <div class="report" id="importReport" hidden></div>
     <div class="queue" id="queue"></div>
     <div class="qfoot" id="qfoot" hidden>
       <span class="muted" id="qcount"></span>
@@ -217,6 +237,7 @@ textarea{color:inherit}
       <div class="field"><label for="fLga">LGA</label><select id="fLga"><option value="">All LGAs</option></select></div>
       <div class="field"><label for="fArea">Community</label><select id="fArea"><option value="">All communities</option></select></div>
       <div class="field"><label for="fAgent">Agent</label><select id="fAgent"><option value="">All agents</option></select></div>
+      <div class="field"><label for="fStatus">Status</label><select id="fStatus"><option value="">All records</option><option value="attn">Need attention</option><option value="ok">Complete</option></select></div>
       <div class="field"><label for="sort">Order</label><select id="sort"><option value="desc">Newest first</option><option value="asc">Oldest first</option><option value="name">Name A–Z</option><option value="form">Form number</option></select></div>
       <div class="exports">
         <input id="restoreIn" type="file" accept=".zip,application/zip" hidden>
@@ -226,6 +247,11 @@ textarea{color:inherit}
         <button class="btn" id="zipBtn" type="button">Download folder (.zip)</button>
       </div>
     </div>
+    <details class="howto" id="tallyBox">
+      <summary>Team tally: what each agent sent</summary>
+      <div class="tallybar"><div class="field"><label for="tDate">Date captured</label><select id="tDate"></select></div><button class="btn ghost" id="tallyCopy" type="button">Copy tally for WhatsApp</button></div>
+      <div id="tally"></div>
+    </details>
     <div class="grid" id="grid"></div>
     <div class="empty" id="empty" hidden>
       <h2>No businesses registered yet</h2>
@@ -236,7 +262,7 @@ textarea{color:inherit}
     </div>
   </section>
 </div>
-<p class="hint" style="max-width:1180px;margin:24px auto 0">Version 15 Oct 2026 · with LGA</p>
+<p class="hint" style="max-width:1180px;margin:24px auto 0">Version 16 Oct 2026 · every photo accounted for</p>
 <datalist id="areaList"></datalist>
 <div id="detail"></div>
 <div class="toast" id="toast" hidden></div>
@@ -268,6 +294,18 @@ function autoLga(it){
 let canWrite=true, records=[], queue=[], openSerial=null;
 const keyOf=f=>String(f||"").trim().replace(/[^A-Za-z0-9_\-.~]+/g,"-").replace(/^[.-]+|[.-]+$/g,"").slice(0,120)||"x";
 const rk=r=>r.key||r.serial;
+const normF=f=>String(f||"").trim().toLowerCase().replace(/^0+(?=\d)/,"");
+let FORMS=new Map();
+function indexForms(){FORMS=new Map();for(const r of records){const f=normF(r.formNo);if(f){if(!FORMS.has(f))FORMS.set(f,[]);FORMS.get(f).push(r)}}}
+function issuesOf(r){const a=[];
+  if(!String(r.formNo||"").trim())a.push("Needs form number");
+  const f=normF(r.formNo);
+  if(f){const others=(FORMS.get(f)||[]).filter(o=>o!==r&&rk(o)!==rk(r));
+    if(others.length)a.push(`Form no. also used by ${others.map(o=>o.owner||"no name").join(", ")}`);
+    else if(r.clashWith&&!records.includes(r))a.push(`Form no. also used by ${r.clashWith}`);}
+  if(!String(r.owner||"").trim())a.push("Needs name");
+  if(r.phone&&!/^0[789]\d{9}$/.test(r.phone))a.push("Check phone");
+  return a}
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const clean=s=>String(s||"").replace(/[\\/:*?"<>|\n\r]+/g," ").replace(/\s+/g," ").trim().slice(0,60);
 const today=()=>new Date().toISOString().slice(0,10);
@@ -456,42 +494,62 @@ async function importChat(files){
     if(!txt.trim()){toast("No chat text found. Choose the exported .zip, or the .txt together with the photos.");return}
     const msgs=parseChat(txt);
     if(!msgs.length){toast("That doesn't look like a WhatsApp chat export.");return}
-    const photos=[],waitP={},waitC={};let omitted=0;
+    /* Pair photos with captions per sender. A run of photos followed by a run of captions is matched
+       from the end: the last caption goes with the last photo, so a photo sent without a caption
+       never pushes the later captions onto the wrong photos. */
+    const photos=[],seq={};let omitted=0,leftCaps=0;
     for(const m of msgs){
       if(/<media omitted>|media omitted|image omitted/i.test(m.text)){omitted++;continue}
       const att=findAttachment(m.text);
       const rest=att?m.text.replace(att.raw,"").trim():m.text;
       const cap=looksLikeCaption(rest)?parseCaption(rest):null;
-      const s=m.sender;(waitP[s]=waitP[s]||[]);(waitC[s]=waitC[s]||[]);
-      if(att){
-        const ph={name:att.name,m,cap:cap||null};photos.push(ph);
-        if(!ph.cap){if(waitC[s].length)ph.cap=waitC[s].shift();else waitP[s].push(ph)}
-      }else if(cap){
-        if(waitP[s].length)waitP[s].shift().cap=cap;else waitC[s].push(cap);
+      const s=m.sender;(seq[s]=seq[s]||[]);
+      if(att){const ph={name:att.name,m,cap:cap||null};photos.push(ph);seq[s].push(ph.cap?{t:"X"}:{t:"P",ph})}
+      else if(cap)seq[s].push({t:"C",cap});
+    }
+    for(const list of Object.values(seq)){
+      let i=0;
+      while(i<list.length){
+        if(list[i].t==="X"){i++;continue}
+        const P=[],C=[];
+        while(i<list.length&&list[i].t==="P")P.push(list[i++].ph);
+        while(i<list.length&&list[i].t==="C")C.push(list[i++].cap);
+        const k=Math.min(P.length,C.length);
+        for(let j=0;j<k;j++)P[P.length-k+j].cap=C[j];
+        leftCaps+=C.length-k;
       }
     }
-    const leftCaps=Object.values(waitC).reduce((n,a)=>n+a.length,0);
     let added=0,skipped=0,missing=0,nocap=0,seenSkip=0;
     const seen=await seenKeys();queue.forEach(q=>q.waHash&&seen.add(q.waHash));
+    const R={};const row=s=>R[s]=R[s]||{sent:0,added:0,already:[],attn:[],missing:0,dates:new Set()};
     for(const ph of photos){
-      const c=ph.cap||{};
-      if(c.formNo&&records.some(r=>String(r.formNo||"").trim().toLowerCase()===c.formNo.trim().toLowerCase())){skipped++;continue}
-      if(c.formNo&&queue.some(q=>q.formNo&&q.formNo.toLowerCase()===c.formNo.toLowerCase())){skipped++;continue}
-      const src=media[ph.name];if(!src){missing++;continue}
+      const c=ph.cap||{};const rr=row(ph.m.sender);rr.sent++;rr.dates.add(ph.m.date);
+      const label=[c.formNo&&("Form "+c.formNo),c.owner].filter(Boolean).join(" · ")||`photo at ${ph.m.time}`;
+      if(c.formNo){
+        const same=records.find(r=>normF(r.formNo)===normF(c.formNo)&&(!c.owner||normC(r.owner)===normC(c.owner)));
+        if(same){skipped++;rr.already.push(label);continue}
+        if(queue.some(q=>normF(q.formNo)===normF(c.formNo)&&(!c.owner||normC(q.owner)===normC(c.owner)))){skipped++;rr.already.push(label+" (sent twice)");continue}
+      }
+      const src=media[ph.name];if(!src){missing++;rr.missing++;rr.attn.push(label+": photo file missing from export");continue}
       let blob=src instanceof Blob?src:await src.async("blob");
       if(!blob.type)blob=new Blob([blob],{type:/\.png$/i.test(ph.name)?"image/png":"image/jpeg"});
       const waHash=(await hashBlob(blob))||nameKey([ph.m.sender,ph.m.date,ph.m.time,ph.name].join("|"));
-      if(seen.has(waHash)){seenSkip++;continue}
+      if(seen.has(waHash)){seenSkip++;rr.already.push(label);continue}
       seen.add(waHash);
       const it={waHash,key:Math.random().toString(36).slice(2),file:blob,url:URL.createObjectURL(blob),owner:"",formNo:"",phone:"",agent:ph.m.sender,
         community:$("#dArea").value.trim(),captured:ph.m.date,status:""};
       if(ph.cap){applyCaption(it,c);it.agent=ph.m.sender;it.status=`From ${ph.m.sender}, ${ph.m.date} ${ph.m.time}. `+(it.phoneWarn?`Phone ${it.phone} has ${it.phone.length} digits, not 11. Check it with the agent.`:it.phone?"Check it.":"No phone number in the caption; add it if you have it.")}
-      else{nocap++;it.status="No caption found for this photo. Type the details.";it.err=true}
-      queue.push(it);added++;
+      else{nocap++;it.status="No caption found for this photo. Type the details, or save it as is and it will be flagged.";it.err=true}
+      if(it.formNo){const other=records.find(r=>normF(r.formNo)===normF(it.formNo))||queue.find(q=>normF(q.formNo)===normF(it.formNo));
+        if(other){it.clashWith=other.owner||"another photo";it.status=`Form ${it.formNo} is also used by ${it.clashWith}. It will be saved with a flag so you can check the number.`;it.err=true;it.ok=false}}
+      if(!it.formNo&&ph.cap){it.status="Caption has no form number. It will be saved with a flag: ask the agent for the number.";it.err=true;it.ok=false}
+      const iss=issuesOf(it);if(iss.length)rr.attn.push(label+": "+iss.join(", "));
+      queue.push(it);added++;rr.added++;
     }
+    lastReport={at:new Date(),rows:R,leftCaps};renderReport();
     renderQueue();
     const bits=[`Added ${added} photo${added===1?"":"s"} to the tray`];
-    if(skipped+seenSkip)bits.push(`${skipped+seenSkip} already imported before, skipped`);
+    if(skipped+seenSkip)bits.push(`${skipped+seenSkip} already in the registry`);
     if(nocap)bits.push(`${nocap} without a caption`);
     if(missing)bits.push(`${missing} photo file${missing===1?"":"s"} not in the export`);
     if(omitted&&!added)bits.push("the export has no photos. Export again with media included");
@@ -502,6 +560,8 @@ async function importChat(files){
   finally{btn.disabled=false;btn.textContent=label}
 }
 $("#chatBtn").onclick=()=>$("#chatIn").click();
+$("#tDate").addEventListener("change",()=>{$("#tDate").dataset.touched="1";renderTally()});
+$("#tallyCopy").onclick=()=>copyText(tallyText(),$("#tallyCopy"));
 $("#forgetBtn").onclick=async()=>{const n=await clearDismissed();toast(n?`${n} removed photo${n===1?"":"s"} will appear again on the next import.`:"There are no removed photos to bring back.")};
 $("#chatIn").onchange=e=>{const fs=[...e.target.files];e.target.value="";if(fs.length)importChat(fs)};
 $("#clearQ").onclick=()=>{queue.forEach(i=>URL.revokeObjectURL(i.url));queue=[];renderQueue()};
@@ -509,34 +569,108 @@ $("#saveAll").onclick=async()=>{
   const b=$("#saveAll");b.disabled=true;let saved=0;
   for(const it of [...queue]){if(await saveItem(it,true))saved++}
   b.disabled=false;renderQueue();
-  toast(saved?`Saved ${saved} to the registry`+(queue.length?`. ${queue.length} still need attention (see the note under each).`:""):"Fill in the form number and name under each photo first.");
+  const flagged=records.filter(r=>issuesOf(r).length).length;
+  toast(saved?`Saved ${saved} to the registry`+(flagged?`. ${flagged} in the registry need attention (red cards).`:".")+(queue.length?` ${queue.length} left in the tray (see the note under each).`:""):"Nothing new was saved. See the note under each photo.");
 };
 
+async function storePhoto(blob,key){const id="p-"+key+"-"+Date.now().toString(36);await putPhoto(id,blob);persist();return id}
+async function recGet(key){return (await getRec(key))||null}
+async function recSet(rec){await putRec(rec);await reload()}
+const rnd=()=>Math.random().toString(36).slice(2,7);
 async function saveItem(it,quiet){
-  if(!it.owner.trim()||!it.formNo.trim()){it.status=!it.formNo.trim()?"Form number needed":"Name needed";it.err=true;it.ok=false;if(!quiet)toast("Fill in the form number and name before saving.");return false}
-  const key=keyOf(it.formNo);
-  const dup=records.find(r=>rk(r)===key||String(r.formNo||"").trim().toLowerCase()===it.formNo.trim().toLowerCase());
-  if(dup){it.status=`Form ${it.formNo.trim()} is already in the registry (${dup.owner||dup.name}). Check the number.`;it.err=true;it.ok=false;if(!quiet)toast(it.status);return false}
+  const form=it.formNo.trim(),name=it.owner.trim();
+  let clashWith=it.clashWith||"";
+  if(form&&!clashWith){
+    const dup=records.find(r=>normF(r.formNo)===normF(form));
+    if(dup){
+      if(name&&normC(dup.owner)===normC(name)){it.status=`Form ${form} (${dup.owner}) is already in the registry. This looks like a resend.`;it.err=true;it.ok=false;if(!quiet)toast(it.status);return false}
+      clashWith=dup.owner||"another record";
+    }
+  }
   it.status="Saving…";it.err=it.ok=false;
   if(!it.waHash)it.waHash=await hashBlob(it.orig||it.file);
   try{
     const blob=await shrink(it.file);
-    const photoId="p-"+key+"-"+Date.now().toString(36);
-    if(await getRec(key)){it.status=`Form ${it.formNo.trim()} is already in the registry. Check the number.`;it.err=true;return false}
-    await putPhoto(photoId,blob);persist();
-    await putRec({
-      key,waHash:it.waHash||"",dli:"DLI 1.3A",formNo:it.formNo.trim(),owner:it.owner.trim(),phone:it.phone.trim(),
-      community:(it.community||$("#dArea").value).trim(),lga:it.lga||lgaOf({community:(it.community||$("#dArea").value)}),leadAgent:($("#dLead").value.trim()||"Mr Agala"),agent:(it.agent||$("#dAgent").value).trim(),captured:it.captured||$("#dDate").value||today(),
-      photo:photoId,createdAt:new Date().toISOString()
+    let key=form&&!clashWith?keyOf(form):(form?keyOf(form)+"-dup-":"noform-")+rnd();
+    if(form&&!clashWith){const ex=await recGet(key);if(ex){clashWith=ex.owner||"another record";key=keyOf(form)+"-dup-"+rnd()}}
+    const photo=await storePhoto(blob,key);
+    const community=(it.community||$("#dArea").value).trim();
+    await recSet({
+      key,waHash:it.waHash||"",dli:"DLI 1.3A",formNo:form,owner:name,phone:it.phone.trim(),
+      community,lga:it.lga||lgaOf({community}),leadAgent:($("#dLead").value.trim()||"Mr Agala"),agent:(it.agent||$("#dAgent").value).trim(),captured:it.captured||$("#dDate").value||today(),
+      clashWith,photo,createdAt:new Date().toISOString()
     });
-    await reload();
     URL.revokeObjectURL(it.url);queue=queue.filter(x=>x!==it);
-    if(!quiet)toast(`Form ${it.formNo.trim()} saved: ${it.owner.trim()}`);
+    const iss=issuesOf({formNo:form,owner:name,phone:it.phone.trim(),clashWith});
+    if(!quiet)toast(iss.length?`Saved with a flag: ${iss.join(", ")}.`:`Form ${form} saved: ${name}`);
     return true;
   }catch(e){
     it.status=e&&e.name==="QuotaExceededError"?"This device is out of storage space. Download a backup and free up space.":"Couldn't save. Try again.";
     it.err=true;return false;
   }
+}
+
+/* ---------- Import receipt: every photo accounted for ---------- */
+let lastReport=null;
+function fmtDate(d){try{return new Date(d+"T12:00:00").toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"})}catch(e){return d}}
+function renderReport(){
+  const el=$("#importReport");if(!lastReport){el.hidden=true;return}
+  const rows=Object.entries(lastReport.rows).sort((a,b)=>b[1].sent-a[1].sent);
+  const T=rows.reduce((t,[,r])=>({sent:t.sent+r.sent,added:t.added+r.added,already:t.already+r.already.length,missing:t.missing+r.missing,attn:t.attn+r.attn.length}),{sent:0,added:0,already:0,missing:0,attn:0});
+  el.hidden=false;
+  el.innerHTML=`<div class="report-head"><div><h3>Import receipt</h3><p class="hint">Every photo in the chat is accounted for: <b>${T.sent} sent</b> = ${T.added} new in the tray + ${T.already} already in the registry${T.missing?` + ${T.missing} missing from the export`:""}.</p></div>
+    <div class="report-actions"><button class="btn ghost" type="button" id="repCopy">Copy for WhatsApp</button><button class="btn ghost" type="button" id="repClose">Hide</button></div></div>
+    <div class="tablewrap"><table class="tally"><thead><tr><th>Agent</th><th>Photos sent</th><th>New</th><th>Already in registry</th><th>Need attention</th></tr></thead><tbody>
+    ${rows.map(([n,r])=>`<tr><td>${esc(n)}</td><td>${r.sent}</td><td>${r.added}</td><td>${r.already.length}</td><td>${r.attn.length?`<span class="chip warn">${r.attn.length}</span>`:"0"}</td></tr>`).join("")}
+    </tbody></table></div>
+    ${T.attn?`<ul class="attnlist">${rows.flatMap(([n,r])=>r.attn.map(a=>`<li><b>${esc(n)}</b>: ${esc(a)}</li>`)).join("")}</ul>`:""}
+    ${lastReport.leftCaps?`<p class="hint">${lastReport.leftCaps} caption${lastReport.leftCaps===1?"":"s"} in the chat had no photo with them.</p>`:""}`;
+  $("#repClose").onclick=()=>{el.hidden=true};
+  $("#repCopy").onclick=()=>copyText(reportText(),$("#repCopy"));
+}
+function reportText(){
+  const rows=Object.entries(lastReport.rows);
+  const dates=[...new Set(rows.flatMap(([,r])=>[...r.dates]))].sort();
+  const L=[`*DLI 1.3A · photos received*`,dates.length?(dates.length===1?fmtDate(dates[0]):`${fmtDate(dates[0])} to ${fmtDate(dates[dates.length-1])}`):"",""];
+  for(const [n,r] of rows){
+    L.push(`*${n}*: ${r.sent} photo${r.sent===1?"":"s"} received ✅`);
+    if(r.already.length)L.push(`   ${r.already.length} already recorded earlier`);
+    r.attn.forEach(a=>L.push(`   ⚠️ ${a}`));
+  }
+  const tot=rows.reduce((t,[,r])=>t+r.sent,0);L.push("",`Total received: ${tot}`);
+  if(rows.some(([,r])=>r.attn.length))L.push("Please reply with the missing details for the ⚠️ items.");
+  return L.filter((x,i)=>x!==""||i>0).join("\n");
+}
+async function copyText(t,btn){
+  try{await navigator.clipboard.writeText(t);const o=btn.textContent;btn.textContent="Copied";setTimeout(()=>btn.textContent=o,1600)}
+  catch(e){const ta=document.createElement("textarea");ta.value=t;ta.className="copybox";ta.readOnly=true;btn.after(ta);ta.select();toast("Select all and copy the text in the box.")}
+}
+
+/* ---------- Team tally: saved records per agent per day ---------- */
+function renderTally(){
+  const sel=$("#tDate");if(!sel)return;
+  const dates=uniq("captured").sort().reverse();const cur=sel.value;
+  sel.innerHTML=dates.map(d=>`<option value="${esc(d)}" ${d===cur?"selected":""}>${esc(fmtDate(d))}</option>`).join("")+`<option value="" ${cur===""&&sel.dataset.touched?"selected":""}>All dates</option>`;
+  const d=sel.value;const list=records.filter(r=>!d||r.captured===d);
+  const by={};list.forEach(r=>{const a=r.agent||"Unknown sender";(by[a]=by[a]||[]).push(r)});
+  const rows=Object.entries(by).sort((a,b)=>b[1].length-a[1].length);
+  $("#tally").innerHTML=list.length?`<div class="tablewrap"><table class="tally"><thead><tr><th>Agent</th><th>Received</th><th>Complete</th><th>Need attention</th></tr></thead><tbody>
+    ${rows.map(([a,rs])=>{const bad=rs.filter(r=>issuesOf(r).length).length;return `<tr><td>${esc(a)}</td><td>${rs.length}</td><td>${rs.length-bad}</td><td>${bad?`<span class="chip warn">${bad}</span>`:"0"}</td></tr>`}).join("")}
+    <tr class="tot"><td>Total</td><td>${list.length}</td><td>${list.filter(r=>!issuesOf(r).length).length}</td><td>${list.filter(r=>issuesOf(r).length).length}</td></tr></tbody></table></div>`:`<p class="hint">No records for this date yet.</p>`;
+}
+function tallyText(){
+  const d=$("#tDate").value;const list=records.filter(r=>!d||r.captured===d);
+  const by={};list.forEach(r=>{const a=r.agent||"Unknown sender";(by[a]=by[a]||[]).push(r)});
+  const L=[`*DLI 1.3A capture tally*`,d?fmtDate(d):"All dates",`Lead agent: ${list[0]?.leadAgent||$("#dLead").value||"Mr Agala"}`,""];
+  for(const [a,rs] of Object.entries(by).sort((x,y)=>y[1].length-x[1].length)){
+    const bad=rs.filter(r=>issuesOf(r).length);
+    L.push(`*${a}*: ${rs.length} received, ${rs.length-bad.length} complete`+(bad.length?`, ${bad.length} need attention`:" ✅"));
+    bad.forEach(r=>L.push(`   ⚠️ ${r.formNo?"Form "+r.formNo:"No form no."} · ${r.owner||"no name"}: ${issuesOf(r).join(", ")}`));
+  }
+  const bad=list.filter(r=>issuesOf(r).length).length;
+  L.push("",`Total: ${list.length} received, ${list.length-bad} complete`+(bad?`, ${bad} need attention`:""));
+  if(bad)L.push("Please reply with the missing details for the ⚠️ items.");
+  return L.join("\n");
 }
 
 /* ---------- Storage on this device (IndexedDB) ---------- */
@@ -565,39 +699,43 @@ let askedPersist=false;
 function persist(){if(askedPersist)return;askedPersist=true;try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}}
 
 /* ---------- Registry ---------- */
-["q","fLga","fArea","fAgent","sort"].forEach(id=>$("#"+id).addEventListener("input",render));
+["q","fLga","fArea","fAgent","fStatus","sort"].forEach(id=>$("#"+id).addEventListener("input",render));
 function uniq(f){return [...new Set(records.map(r=>r[f]).filter(Boolean))].sort((a,b)=>a.localeCompare(b))}
 function fillSelect(id,vals,label){const s=$("#"+id),cur=s.value;s.innerHTML=`<option value="">${label}</option>`+vals.map(v=>`<option ${v===cur?"selected":""}>${esc(v)}</option>`).join("")}
 function filtered(){
-  const q=$("#q").value.toLowerCase().trim(),lf=$("#fLga").value,a=$("#fArea").value,g=$("#fAgent").value,s=$("#sort").value;
-  let list=records.filter(r=>(!lf||lgaOf(r)===lf)&&(!a||r.community===a)&&(!g||r.agent===g)&&
+  const q=$("#q").value.toLowerCase().trim(),st=$("#fStatus").value,lf=$("#fLga").value,a=$("#fArea").value,g=$("#fAgent").value,s=$("#sort").value;
+  let list=records.filter(r=>(!st||(st==="attn")===(issuesOf(r).length>0))&&(!lf||lgaOf(r)===lf)&&(!a||r.community===a)&&(!g||r.agent===g)&&
     (!q||[r.formNo,r.owner,r.phone,r.community,lgaOf(r),r.leadAgent,r.agent].join(" ").toLowerCase().includes(q)));
   const t=r=>r.createdAt||"";
   list.sort(s==="name"?(x,y)=>(x.owner||x.name||"").localeCompare(y.owner||y.name||""):s==="form"?byForm:s==="asc"?(x,y)=>t(x).localeCompare(t(y)):(x,y)=>t(y).localeCompare(t(x)));
   return list;
 }
-const byForm=(x,y)=>String(x.formNo||"").localeCompare(String(y.formNo||""),undefined,{numeric:true});
+const byForm=(x,y)=>(!x.formNo)-(!y.formNo)||String(x.formNo||"").localeCompare(String(y.formNo||""),undefined,{numeric:true});
 function render(){
+  indexForms();
   const weekAgo=Date.now()-7*864e5;
   $("#sTotal").textContent=records.length;
   $("#sWeek").textContent=records.filter(r=>new Date(r.captured||r.createdAt).getTime()>=weekAgo).length;
   const areas=uniq("community"),agents=uniq("agent");
   $("#sAreas").textContent=areas.length;$("#sAgents").textContent=agents.length;
+  const attnN=records.filter(r=>issuesOf(r).length).length;$("#sAttn").textContent=attnN;$("#sAttn").parentElement.classList.toggle("on",attnN>0);
   fillSelect("fLga",[...new Set(records.map(lgaOf).filter(Boolean))].sort(),"All LGAs");fillSelect("fArea",areas,"All communities");fillSelect("fAgent",agents,"All agents");
   $("#areaList").innerHTML=[...new Set([...areas,...Object.keys(COMMUNITY_LGA)])].map(a=>`<option value="${esc(a)}">${esc(lgaLookup(a)?lgaLookup(a).lgas.join(" / "):"")}</option>`).join("");
   const list=filtered();
   $("#empty").hidden=records.length>0;
   $("#grid").innerHTML=records.length&&!list.length?`<p class="muted">No businesses match those filters.</p>`:list.map(r=>`
-    <button class="rec" type="button" data-key="${esc(rk(r))}">
-      <div class="ph">${r.photo?`<img data-photo="${esc(r.photo)}" alt="${esc(r.owner||r.name)}" onerror="this.remove()">`:""}<span class="serial">FORM ${esc(r.formNo)}</span></div>
+    <button class="rec ${issuesOf(r).length?"attn":""}" type="button" data-key="${esc(rk(r))}">
+      <div class="ph">${r.photo?`<img data-photo="${esc(r.photo)}" alt="${esc(r.owner||r.name)}" onerror="this.remove()">`:""}<span class="serial ${r.formNo&&!issuesOf(r).some(x=>x.startsWith("Form no."))?"":"bad"}">FORM ${esc(r.formNo||"?")}</span></div>
       <div class="body">
-        <div class="name">${esc(r.owner||r.name)}</div>
-        <div class="owner">${esc(r.phone||"")}${r.phone&&!/^0[789]\d{9}$/.test(r.phone)?' <span class="chip warn">Check phone</span>':""}</div>
+        <div class="name">${esc(r.owner||r.name||"Name needed")}</div>
+        <div class="owner">${esc(r.phone||"")}</div>
+        ${issuesOf(r).length?`<div class="meta">${issuesOf(r).map(x=>`<span class="chip warn">${esc(x)}</span>`).join("")}</div>`:""}
         <div class="meta">${[[r.community,lgaOf(r)].filter(Boolean).join(", "),r.leadAgent&&("Lead: "+r.leadAgent),r.agent&&("by "+r.agent),r.captured].filter(Boolean).map(m=>`<span class="chip">${esc(m)}</span>`).join("")}</div>
       </div>
     </button>`).join("");
   $("#csvBtn").disabled=$("#zipBtn").disabled=$("#xlsxBtn").disabled=!records.length;
   hydrate($("#grid"));
+  renderTally();
   if(openSerial)openDetail(openSerial,true);
 }
 $("#grid").addEventListener("click",e=>{const c=e.target.closest(".rec");c&&openDetail(c.dataset.key)});
@@ -613,7 +751,8 @@ function openDetail(serial,refresh){
     <div class="sheet">
       <div class="big">${r.photo?`<img data-photo="${esc(r.photo)}" alt="${esc(r.owner||r.name)}">`:""}</div>
       <form id="editForm">
-        <div class="row"><span><span class="serial">FORM ${esc(r.formNo)}</span> <span class="chip">${esc(r.dli||"DLI 1.3A")}</span></span><button class="btn ghost" type="button" id="closeD">Close</button></div>
+        <div class="row"><span><span class="serial ${r.formNo&&!issuesOf(r).some(x=>x.startsWith("Form no."))?"":"bad"}">FORM ${esc(r.formNo||"?")}</span> <span class="chip">${esc(r.dli||"DLI 1.3A")}</span></span><button class="btn ghost" type="button" id="closeD">Close</button></div>
+        ${issuesOf(r).length?`<div class="confirm">${issuesOf(r).map(esc).join(" · ")}. Fix it below and save.</div>`:""}
         <div class="field"><label for="eForm">Form number</label><input id="eForm" value="${esc(r.formNo)}" ${ro}></div>
         <div class="field"><label for="eOwner">Name</label><input id="eOwner" value="${esc(r.owner)}" ${ro}></div>
         <div class="field"><label for="ePhone">Phone number</label><input id="ePhone" value="${esc(r.phone)}" inputmode="tel" ${ro}></div>
@@ -636,7 +775,9 @@ function openDetail(serial,refresh){
     try{
       const fields={owner:$("#eOwner").value.trim()||r.owner,formNo:$("#eForm").value.trim()||r.formNo,phone:$("#ePhone").value.trim(),
         community:$("#eArea").value.trim(),lga:$("#eLga").value,leadAgent:$("#eLead").value.trim(),agent:$("#eAgent").value.trim(),captured:$("#eDate").value};
-      const nk=keyOf(fields.formNo);
+      const sameForm=normF(fields.formNo)===normF(r.formNo);
+      const nk=!fields.formNo||(sameForm&&!String(serial).startsWith("noform-"))?serial:keyOf(fields.formNo);
+      if(!sameForm)fields.clashWith="";
       if(nk!==serial){
         if(records.some(x=>rk(x)===nk)||(await getRec(nk))){toast(`Form ${fields.formNo} is already in the registry.`);return}
         await putRec({...r,...fields,key:nk});
@@ -660,12 +801,12 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape"&&openSerial)closeDet
 
 /* ---------- Export ---------- */
 function csv(list){
-  const cols=["formNo","dli","owner","phone","community","lga","leadAgent","agent","captured","photo_file"];
-  const head=["Form Number","DLI","Name","Phone Number","Community","LGA","Lead agent","Field agent","Date captured","Photo file"];
+  const cols=["formNo","dli","owner","phone","community","lga","leadAgent","agent","captured","status","photo_file"];
+  const head=["Form Number","DLI","Name","Phone Number","Community","LGA","Lead agent","Field agent","Date captured","Status","Photo file"];
   const q=v=>{v=String(v??"");return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
-  return "﻿"+[head.join(","),...list.map(r=>cols.map(c=>q(c==="photo_file"?photoName(r):c==="dli"?(r.dli||"DLI 1.3A"):c==="lga"?lgaOf(r):c==="phone"&&r.phone?"\t"+r.phone:r[c])).join(","))].join("\r\n");
+  return "﻿"+[head.join(","),...list.map(r=>cols.map(c=>q(c==="photo_file"?photoName(r):c==="dli"?(r.dli||"DLI 1.3A"):c==="lga"?lgaOf(r):c==="status"?(issuesOf(r).join("; ")||"Complete"):c==="phone"&&r.phone?"\t"+r.phone:r[c])).join(","))].join("\r\n");
 }
-const photoName=r=>`${clean(r.formNo)||rk(r)} - ${clean(r.owner||r.name)||"business"}.jpg`;
+const photoName=r=>`${r.formNo?clean(r.formNo)+(r.clashWith?" (check number) "+String(rk(r)).slice(-5):""):"NO FORM NUMBER "+String(rk(r)).slice(-5)} - ${clean(r.owner||r.name)||"no name"}.jpg`;
 function save(filename,data){
   const blob=data instanceof Blob?data:new Blob([data],{type:"text/csv;charset=utf-8"});
   const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=filename;
@@ -734,8 +875,8 @@ async function thumb(blob,max=360){
   return {blob:b,w:c.width,h:c.height};
 }
 async function buildXlsx(list,onStep){
-  const COLS=[["Photo",26],["Form Number",14],["DLI",10],["Name",28],["Phone Number",16],["Community",16],["LGA",16],["Lead agent",14],["Field agent",18],["Date captured",14]];
-  const L="ABCDEFGHIJ";const zip=new JSZip();const EMU=9525,BOXW=170,BOXH=140,PAD=4;
+  const COLS=[["Photo",26],["Form Number",14],["DLI",10],["Name",28],["Phone Number",16],["Community",16],["LGA",16],["Lead agent",14],["Field agent",18],["Date captured",14],["Status",30]];
+  const L="ABCDEFGHIJK";const zip=new JSZip();const EMU=9525,BOXW=170,BOXH=140,PAD=4;
   const rows=[`<row r="1" ht="22" customHeight="1">${COLS.map((c,i)=>`<c r="${L[i]}1" t="inlineStr" s="1"><is><t>${xe(c[0])}</t></is></c>`).join("")}</row>`];
   const anchors=[],rels=[];let missing=0;
   for(let i=0;i<list.length;i++){
@@ -750,7 +891,7 @@ async function buildXlsx(list,onStep){
       anchors.push(`<xdr:oneCellAnchor><xdr:from><xdr:col>0</xdr:col><xdr:colOff>${PAD*EMU}</xdr:colOff><xdr:row>${rn-1}</xdr:row><xdr:rowOff>${PAD*EMU}</xdr:rowOff></xdr:from><xdr:ext cx="${w*EMU}" cy="${hh*EMU}"/><xdr:pic><xdr:nvPicPr><xdr:cNvPr id="${n+1}" name="Photo ${xe(r.formNo)}"/><xdr:cNvPicPr><a:picLocks noChangeAspect="1"/></xdr:cNvPicPr></xdr:nvPicPr><xdr:blipFill><a:blip r:embed="rId${n}"/><a:stretch><a:fillRect/></a:stretch></xdr:blipFill><xdr:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${w*EMU}" cy="${hh*EMU}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></xdr:spPr></xdr:pic><xdr:clientData/></xdr:oneCellAnchor>`);
       h=hh;
     }catch(e){missing++}
-    const vals=["",r.formNo,r.dli||"DLI 1.3A",r.owner||r.name,r.phone,r.community,lgaOf(r),r.leadAgent,r.agent,r.captured];
+    const vals=["",r.formNo,r.dli||"DLI 1.3A",r.owner||r.name,r.phone,r.community,lgaOf(r),r.leadAgent,r.agent,r.captured,issuesOf(r).join("; ")||"Complete"];
     rows.push(`<row r="${rn}" ht="${((h+PAD*2)*0.75).toFixed(1)}" customHeight="1">${vals.map((v,j)=>`<c r="${L[j]}${rn}" t="inlineStr" s="2"><is><t>${xe(v)}</t></is></c>`).join("")}</row>`);
   }
   const NS='xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"';
