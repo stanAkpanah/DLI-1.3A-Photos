@@ -113,6 +113,8 @@ header .lede{max-width:56ch;margin:8px 0 0;color:var(--muted)}
 .danger h2{font-size:17px;color:var(--warn)}
 .danger .hint{max-width:70ch;margin:4px 0 0}
 .danger .confirm{flex-basis:100%}
+.capshow{border:1px dashed var(--line);border-radius:8px;padding:8px 10px}
+.capshow pre{margin:4px 0 0;white-space:pre-wrap;font:13px/1.45 var(--f-mono);color:var(--ink)}
 .qfoot{display:flex;flex-wrap:wrap;gap:12px;justify-content:flex-end;align-items:center}
 
 /* Toolbar */
@@ -277,7 +279,7 @@ textarea{color:inherit}
     <button class="btn ghost" id="clearNo" type="button">Keep my records</button>
   </div>
 </section>
-<p class="hint" style="max-width:1180px;margin:24px auto 0">Version 16 Oct 2026 · every photo accounted for</p>
+<p class="hint" style="max-width:1180px;margin:24px auto 0">Version 18 Oct 2026 · smarter caption reading</p>
 <datalist id="areaList"></datalist>
 <div id="detail"></div>
 <div class="toast" id="toast" hidden></div>
@@ -319,6 +321,7 @@ function issuesOf(r){const a=[];
     if(others.length)a.push(`Form no. also used by ${others.map(o=>o.owner||"no name").join(", ")}`);
     else if(r.clashWith&&!records.includes(r))a.push(`Form no. also used by ${r.clashWith}`);}
   if(!String(r.owner||"").trim())a.push("Needs name");
+  if(r.note&&!String(r.formNo||"").trim())a.push(r.note);
   if(r.phone&&!/^0[789]\d{9}$/.test(r.phone))a.push("Check phone");
   return a}
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -419,8 +422,19 @@ function parseCaption(t){
   t=String(t||"").replace(INVIS,"").replace(/[\u202f\u00a0]/g," ");
   const o={};let m;
   if(m=t.match(/^\s*\[[^\]]*\]\s*([^:\n]{1,40}):/))o.agent=m[1].trim();
-  if(m=t.match(/form[^\S\n]*(?:no\.?|num(?:ber)?\.?|#)[^\S\n]*[:.\-]?[^\S\n]*([A-Za-z0-9\/\-]*\d[A-Za-z0-9\/\-]*)/i))o.formNo=m[1];
-  if(m=t.match(/(?:^|[\n\r]|:\s)[^\S\n]*(?:owner'?s?\s+)?(?:full\s+)?name\s*[:\-]\s*([^\n\r]+)/i))o.owner=m[1].trim().replace(/[.\s]+$/,"");
+  if(m=t.match(/(?:form|serial|s\/n)[^\S\n]*(?:no\.?|num(?:ber)?\.?|#)?[^\S\n]*[:.\-=]*[^\S\n]*([A-Za-z]{0,3}[\-\/]?\d[\dA-Za-z\/\-]*)/i))o.formNo=m[1];
+  const NAME_LABEL=/^[^\S\n]*(?:(?:the\s+)?(?:business\s+)?(?:owner'?s?|full|customer'?s?|beneficiary'?s?|respondent'?s?|trader'?s?|vendor'?s?|applicant'?s?|first|sur)[^\S\n]*)?names?(?:[^\S\n]+of[^\S\n]+(?:the[^\S\n]+)?(?:business[^\S\n]+)?(?:owner|trader|beneficiary|respondent|vendor|applicant|proprietor))?[^\S\n]*[:.\-=]+[^\S\n]*(.+)$/im;
+  const OWNER_LABEL=/^[^\S\n]*(?:business[^\S\n]+)?(?:owner|proprietor|proprietress|beneficiary|trader|vendor|respondent|applicant)[^\S\n]*[:\-=]+[^\S\n]*(.+)$/im;
+  if((m=t.match(NAME_LABEL))||(m=t.match(OWNER_LABEL)))o.owner=m[1].trim().replace(/[.,;\s]+$/,"");
+  else{
+    /* No "Name:" label: take the first line that looks like a person's name (2 to 5 words, letters only). */
+    for(const line of t.split("\n")){
+      const L=line.replace(/^\s*\[[^\]]*\]\s*[^:]{1,40}:\s*/,"").trim().replace(/[.,;]+$/,"");
+      if(!L||/\d|DLI|form|phone|tel\b|mobile|gsm|community|lga|l\.g\.a|business\s*name|address|location|ward|street|^\w+\s*[:=]/i.test(L))continue;
+      const words=L.split(/\s+/);
+      if(words.length>=2&&words.length<=5&&words.every(w=>/^[A-Za-z][A-Za-z'.\-]*$/.test(w))){o.owner=L;break}
+    }
+  }
   if(m=t.match(/community\s*[:\-]\s*([^\n\r]+)/i))o.community=m[1].trim().replace(/[.\s]+$/,"");
   if(m=t.match(/\bL\.?G\.?A\.?\s*[:\-]\s*([^\n\r]+)/i)){const v=normC(m[1]);const hit=LGAS.find(l=>normC(l)===v||normC(l).startsWith(v)||v.startsWith(normC(l)));if(hit)o.lga=hit}
   const ph=findPhone(t,o.formNo);
@@ -517,7 +531,7 @@ async function importChat(files){
       if(/<media omitted>|media omitted|image omitted/i.test(m.text)){omitted++;continue}
       const att=findAttachment(m.text);
       const rest=att?m.text.replace(att.raw,"").trim():m.text;
-      const cap=looksLikeCaption(rest)?parseCaption(rest):null;
+      const cap=looksLikeCaption(rest)?{...parseCaption(rest),raw:rest.trim()}:null;
       const s=m.sender;(seq[s]=seq[s]||[]);
       if(att){const ph={name:att.name,m,cap:cap||null};photos.push(ph);seq[s].push(ph.cap?{t:"X"}:{t:"P",ph})}
       else if(cap)seq[s].push({t:"C",cap});
@@ -531,6 +545,7 @@ async function importChat(files){
         while(i<list.length&&list[i].t==="C")C.push(list[i++].cap);
         const k=Math.min(P.length,C.length);
         for(let j=0;j<k;j++)P[P.length-k+j].cap=C[j];
+        if(k)for(let j=0;j<P.length-k;j++)P[j].near=C[0];
         leftCaps+=C.length-k;
       }
     }
@@ -553,7 +568,9 @@ async function importChat(files){
       seen.add(waHash);
       const it={waHash,key:Math.random().toString(36).slice(2),file:blob,url:URL.createObjectURL(blob),owner:"",formNo:"",phone:"",agent:ph.m.sender,
         community:$("#dArea").value.trim(),captured:ph.m.date,status:""};
-      if(ph.cap){applyCaption(it,c);it.agent=ph.m.sender;it.status=`From ${ph.m.sender}, ${ph.m.date} ${ph.m.time}. `+(it.phoneWarn?`Phone ${it.phone} has ${it.phone.length} digits, not 11. Check it with the agent.`:it.phone?"Check it.":"No phone number in the caption; add it if you have it.")}
+      if(ph.cap){applyCaption(it,c);it.caption=c.raw||"";it.agent=ph.m.sender;it.status=`From ${ph.m.sender}, ${ph.m.date} ${ph.m.time}. `+(it.phoneWarn?`Phone ${it.phone} has ${it.phone.length} digits, not 11. Check it with the agent.`:it.phone?"Check it.":"No phone number in the caption; add it if you have it.")}
+      else if(ph.near){nocap++;const nl=[ph.near.formNo&&("Form "+ph.near.formNo),ph.near.owner].filter(Boolean).join(" · ")||"the next photo";
+        it.note=`Maybe extra photo of ${nl}`;it.status=`No caption. This photo was sent just before ${nl}. If it's the same business, click Remove; otherwise type its details.`;it.err=true}
       else{nocap++;it.status="No caption found for this photo. Type the details, or save it as is and it will be flagged.";it.err=true}
       if(it.formNo){const other=records.find(r=>normF(r.formNo)===normF(it.formNo))||queue.find(q=>normF(q.formNo)===normF(it.formNo));
         if(other){it.clashWith=other.owner||"another photo";it.status=`Form ${it.formNo} is also used by ${it.clashWith}. It will be saved with a flag so you can check the number.`;it.err=true;it.ok=false}}
@@ -613,7 +630,7 @@ async function saveItem(it,quiet){
     await recSet({
       key,waHash:it.waHash||"",dli:"DLI 1.3A",formNo:form,owner:name,phone:it.phone.trim(),
       community,lga:it.lga||lgaOf({community}),leadAgent:($("#dLead").value.trim()||"Mr Agala"),agent:(it.agent||$("#dAgent").value).trim(),captured:it.captured||$("#dDate").value||today(),
-      clashWith,photo,createdAt:new Date().toISOString()
+      clashWith,note:it.note||"",caption:String(it.caption||"").slice(0,1500),photo,createdAt:new Date().toISOString()
     });
     URL.revokeObjectURL(it.url);queue=queue.filter(x=>x!==it);
     const iss=issuesOf({formNo:form,owner:name,phone:it.phone.trim(),clashWith});
@@ -768,6 +785,7 @@ function openDetail(serial,refresh){
       <form id="editForm">
         <div class="row"><span><span class="serial ${r.formNo&&!issuesOf(r).some(x=>x.startsWith("Form no."))?"":"bad"}">FORM ${esc(r.formNo||"?")}</span> <span class="chip">${esc(r.dli||"DLI 1.3A")}</span></span><button class="btn ghost" type="button" id="closeD">Close</button></div>
         ${issuesOf(r).length?`<div class="confirm">${issuesOf(r).map(esc).join(" · ")}. Fix it below and save.</div>`:""}
+        ${r.caption?`<div class="capshow"><span class="hint">WhatsApp caption${r.agent?" from "+esc(r.agent):""}</span><pre>${esc(r.caption)}</pre></div>`:""}
         <div class="field"><label for="eForm">Form number</label><input id="eForm" value="${esc(r.formNo)}" ${ro}></div>
         <div class="field"><label for="eOwner">Name</label><input id="eOwner" value="${esc(r.owner)}" ${ro}></div>
         <div class="field"><label for="ePhone">Phone number</label><input id="ePhone" value="${esc(r.phone)}" inputmode="tel" ${ro}></div>
